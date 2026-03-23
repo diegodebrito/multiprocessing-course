@@ -158,9 +158,6 @@ def exercise4():
     arr = np.ndarray((N,), dtype=np.float64, buffer=shm.buf)
     arr[:] = np.arange(N, dtype=np.float64)
 
-    p = Process(target=lambda: print(f"  {worker_try_write_readonly(shm.name, (N,), '<f8')}"))
-    # (lambda won't work with spawn, but fine for fork demo)
-    # Use a proper module-level-style approach:
     result = worker_try_write_readonly(shm.name, (N,), arr.dtype.str)
     print(f"  {result}")
 

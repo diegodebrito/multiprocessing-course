@@ -120,18 +120,20 @@ def run_multiprocess(n: int, repeats: int) -> float:
 # For very short tasks (< ~10 ms), use a pool rather than creating processes
 # per task.
 
+def _noop():
+    """Do-nothing worker — must be at module level to be picklable on Windows/spawn."""
+    pass
+
+
 def measure_process_creation_overhead():
     """
     Measure how long it takes to start and join a do-nothing process.
     This is the baseline overhead you're paying regardless of task size.
     """
-    def noop():
-        pass
-
     trials = 5
     times = []
     for _ in range(trials):
-        p = Process(target=noop)
+        p = Process(target=_noop)
         t0 = time.perf_counter()
         p.start()
         p.join()
@@ -183,16 +185,18 @@ def measure_process_creation_overhead():
 # This is exactly why later modules introduce shared memory — it's the way to
 # let processes READ a large dataset without copying it.
 
+def _mutate(lst):
+    """Worker that appends to a list — must be module-level to be picklable on Windows/spawn."""
+    lst.append(99)
+    print(f"  Child sees: {lst}  (pid {os.getpid()})")
+
+
 def demonstrate_isolation():
     """Show that child processes have their own memory: modifying a variable
     in the child does NOT affect the parent."""
     shared_list = [1, 2, 3]
 
-    def mutate(lst):
-        lst.append(99)
-        print(f"  Child sees: {lst}  (pid {os.getpid()})")
-
-    p = Process(target=mutate, args=(shared_list,))
+    p = Process(target=_mutate, args=(shared_list,))
     p.start()
     p.join()
     # The child appended 99, but the parent's list is unchanged.
